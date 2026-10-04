@@ -11,6 +11,7 @@
 
   # Blur Auto Clicker
 
+  **THIS IS NOT THE ORIGINAL PROJECT THIS IS JUST A FORK THAT MAKES IT RUN ON LINUX. CHECK OUT THE ORIGINAL PROJECT [HERE](https://github.com/Blur009/Blur-AutoClicker)**
 
   <img src="https://github.com/Blur009/Blur-AutoClicker/blob/main/public/V3.0.0_UI.png" width="600"/>
 
