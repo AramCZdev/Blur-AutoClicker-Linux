@@ -13,6 +13,20 @@
 
   **THIS IS NOT THE ORIGINAL PROJECT THIS IS JUST A FORK THAT MAKES IT RUN ON LINUX. CHECK OUT THE ORIGINAL PROJECT [HERE](https://github.com/Blur009/Blur-AutoClicker)**
 
+  > [!IMPORTANT]
+  > **This is a modified version of [Blur009/Blur-AutoClicker](https://github.com/Blur009/Blur-AutoClicker).**
+  > Original work © Blur009, licensed under GPL-3.0. Linux/X11 port modifications © 2026 the
+  > Blur-AutoClicker-Linux contributors, also licensed under GPL-3.0. No affiliation or
+  > endorsement is implied by Blur009. Upstream remains the canonical Windows build; bug reports
+  > and feature requests for the Windows version belong there, not here.
+  >
+  > **This fork targets Linux only.** The Win32 code paths have been removed rather than
+  > feature-gated, so there is no Windows build here and no plan for one.
+  >
+  > **Status: the Linux port is in progress and the app does not build on Linux yet.** The rest of
+  > this README still describes the Windows release. See
+  > [`docs/linux-port-plan.md`](docs/linux-port-plan.md) for the migration plan and phase status.
+
   <img src="https://github.com/Blur009/Blur-AutoClicker/blob/main/public/V3.0.0_UI.png" width="600"/>
 
   <p align="center"><em>An auto clicker that actually clicks at the speed you set.</em></p>
@@ -93,9 +107,13 @@ Yes — see <a href="BUILDING.md">BUILDING.md</a> for setup, build, and validati
 
 ## License
 
-Licensed under the [GNU General Public License](LICENSE).
+Licensed under the [GNU General Public License v3.0](LICENSE) — the licence is unchanged from
+upstream. As a modified version, this fork is distributed under the same terms, with the changes
+noted above and in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Note
+*Everything in this section refers to the upstream Windows release and does not apply to this fork.*
+
 This project has been accepted into Windows Package Manager (winget). You can install it with the command:
 
 ```powershell
