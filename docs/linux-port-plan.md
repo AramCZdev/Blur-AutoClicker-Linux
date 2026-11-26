@@ -682,7 +682,7 @@ Expected effect on `cargo tree`: the `windows-sys`/`windows-targets` subtree (â‰
 - **Remove** `build.beforeBundleCommand`
 - `bundle.targets: ["deb", "appimage"]` (add `"rpm"` later if wanted)
 - `bundle.icon`: PNG set + `.desktop`
-- `identifier`: `io.github.aramczdev.blurautoclicker` (reverse-DNS, required for AppImage/deb)
+- `identifier`: `dev.is-a.aramcz.blurautoclicker` (reverse-DNS, required for AppImage/deb)
 - **Remove** the `bundle.windows` block
 - `bundle.deb.depends`: `["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"]`
 - `bundle.linux.deb.desktopTemplate`: hide from tray-menu noise
