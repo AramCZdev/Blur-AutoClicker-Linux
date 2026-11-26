@@ -2,13 +2,12 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "BlurAutoClicker",
   "version": "3.9.6",
-  "identifier": "BlurAutoClicker",
+  "identifier": "io.github.aramczdev.blurautoclicker",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run vite",
     "beforeBuildCommand": "npm run frontend:build",
-    "beforeBundleCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-windows-redist.ps1",
     "removeUnusedCommands": true
   },
   "app": {
@@ -34,29 +33,23 @@
   },
   "bundle": {
     "active": true,
-    "targets": "nsis",
+    "targets": ["deb", "appimage"],
     "createUpdaterArtifacts": true,
-    "publisher": "Blur009",
-    "copyright": "Copyright (c) Blur009",
+    "publisher": "AramCZdev",
+    "copyright": "Copyright (c) Blur009 (original) and Blur-AutoClicker-Linux contributors (Linux port)",
     "category": "Utility",
     "shortDescription": "Configurable auto clicker with accurate CPS timing.",
-    "longDescription": "Performance-focused auto clicker with global hotkeys, optional overlay, and advanced timing. Licensed under GPLv3.",
-    "homepage": "https://github.com/Blur009/Blur-AutoClicker",
+    "longDescription": "Performance-focused auto clicker with global hotkeys, optional overlay, and advanced timing. Linux/X11 port of https://github.com/Blur009/Blur-AutoClicker by Blur009. Licensed under GPL-3.0.",
+    "homepage": "https://github.com/AramCZdev/Blur-AutoClicker-Linux",
     "resources": {
       "resources/*": ""
     },
     "icon": [
-      "icons/icon-deactivated-dark.ico"
-    ],
-    "windows": {
-      "webviewInstallMode": {
-        "type": "embedBootstrapper",
-        "silent": true
-      },
-      "nsis": {
-        "compression": "lzma",
-        "installerIcon": "icons/icon-deactivated-dark.ico"
-      }
-    }
+      "icons/16x16.png",
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png"
+    ]
   }
 }

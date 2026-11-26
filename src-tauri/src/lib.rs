@@ -1,4 +1,3 @@
-mod crash_handler;
 mod diagnostics;
 mod error;
 mod portable;
@@ -15,7 +14,6 @@ mod icon;
 mod overlay;
 mod ui_commands;
 mod updates;
-mod window_lifecycle;
 
 pub use crate::app_state::ClickerStatusPayload;
 pub use crate::app_state::{ClickerState, IconState};
@@ -251,7 +249,6 @@ fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
         .tooltip("BlurAutoClicker")
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => {
-                crate::window_lifecycle::on_show(app);
                 if let Some(window) = app.get_webview_window("main") {
                     #[cfg(target_os = "windows")]
                     apply_ws_ex_noactivate(&window, false);
@@ -279,7 +276,6 @@ fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
             } = event
             {
                 let app = tray.app_handle();
-                crate::window_lifecycle::on_show(app);
                 if let Some(window) = app.get_webview_window("main") {
                     #[cfg(target_os = "windows")]
                     apply_ws_ex_noactivate(&window, false);
@@ -530,16 +526,12 @@ pub fn run() {
                      To fix permanently, exclude 'msedgewebview2.exe' in RTSS settings."
                 );
             }
-            if let Err(e) = crate::crash_handler::initialize_crashpad() {
-                log::warn!("[Crashpad] Failed to initialize: {e}");
-            }
             setup_tray(&handle)?;
             crate::icon::set_icon_theme(
                 &handle, "#22c55e", "dark", true, "auto", "theme",
             );
             spawn_overlay_auto_hide(&handle);
             spawn_start_zone_monitor(&handle);
-            window_lifecycle::start_periodic_trimming(30);
             setup_hotkeys(&handle)?;
             setup_frontend_listener(&handle);
             setup_close_handler(&handle);

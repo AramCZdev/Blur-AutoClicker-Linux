@@ -234,7 +234,6 @@ pub fn set_autostart_enabled(enabled: bool) -> AppResult<()> {
 
 #[tauri::command]
 pub fn hide_main_window(app: AppHandle) -> AppResult<()> {
-    crate::window_lifecycle::on_hide(&app);
     if let Some(window) = app.get_webview_window("main") {
         window.hide()?;
     }

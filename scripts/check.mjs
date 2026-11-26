@@ -98,36 +98,17 @@ function run(c) {
  * @returns {boolean} true if a running instance was detected (and we aborted)
  */
 async function guardRunningInstance() {
-  let running = false;
-  if (process.platform === 'win32') {
-    const r = spawnSync('tasklist', ['/NH'], { encoding: 'utf8', shell: true });
-    const out = r.stdout || '';
-    running = /BlurAutoClicker/i.test(out) || /crashpad_handler/i.test(out);
-  } else {
-    const r = spawnSync('pgrep', ['-f', 'BlurAutoClicker|crashpad_handler'], {
-      encoding: 'utf8',
-    });
-    running = r.status === 0 && !!r.stdout.trim();
-  }
-
-  if (!running) {
-    try {
-      const { openSync, closeSync } = await import('node:fs');
-      const { resolve } = await import('node:path');
-      const resource = resolve('src-tauri/resources/crashpad_handler.exe');
-      const fd = openSync(resource, 'r+');
-      closeSync(fd);
-    } catch {
-      running = true;
-    }
-  }
+  // `pgrep -f` is portable across Linux and macOS; there is no Windows path
+  // because this fork targets Linux only.
+  const r = spawnSync('pgrep', ['-f', 'BlurAutoClicker'], { encoding: 'utf8' });
+  const running = r.status === 0 && !!r.stdout.trim();
 
   if (!running) return false;
 
   process.stdout.write(
     `\n${C.red('CHECK ABORTED — BlurAutoClicker is currently running.')}\n` +
-      `${C.bold('Close BlurAutoClicker')} (and any ${C.bold('crashpad_handler.exe')} it spawned), then re-run ${C.bold('npm run check')}.\n` +
-      `${C.dim('A running instance locks src-tauri/resources/crashpad_handler.exe, so every cargo step fails with "os error 32: file in use by another process".')}\n`,
+      `${C.bold('Close BlurAutoClicker')}, then re-run ${C.bold('npm run check')}.\n` +
+      `${C.dim('A running instance can make cargo/npm steps behave unpredictably.')}\n`,
   );
   process.exit(1);
 }

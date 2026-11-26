@@ -1,4 +1,0 @@
-# Committed hash for crashpad_handler.exe (sha256 hex).
-# Fill with sha256sum target/release/crashpad_handler.exe after a clean prebuilt build.
-# When present, build.rs will fail the build if the downloaded handler does not match — closes upstream asset swap (BUG-R2-C3-A3-H1).
-
