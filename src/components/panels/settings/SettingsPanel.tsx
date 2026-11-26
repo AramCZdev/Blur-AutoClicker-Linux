@@ -1,24 +1,117 @@
 import "./SettingsPanel.css";
-import { useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useIconHover } from "@animateicons/react";
+import {
+  BookmarkIcon,
+  InfoIcon,
+  KeyboardIcon,
+  LayoutListIcon,
+  PictureInPictureIcon,
+  SquareTerminalIcon,
+  SunIcon,
+  ToggleRightIcon,
+  Volume2Icon,
+  WrenchIcon,
+} from "@animateicons/react/lucide";
+import type { AnimatedIcon } from "../../animatedIcon";
 import type { AppInfo, PresetId, Settings } from "../../../store";
+import type { RestartOutcome } from "../../../restart";
+import { burstConfetti } from "../../../confetti";
 
 import GeneralSection from "./sections/GeneralSection";
 import BehaviorSection from "./sections/BehaviorSection";
 import AppearanceSection from "./sections/AppearanceSection";
+import OverlaySection from "./sections/OverlaySection";
+import SoundsSection from "./sections/SoundsSection";
 import PresetsSection from "./sections/PresetsSection";
 import MaintenanceSection from "./sections/MaintenanceSection";
 import KeybindsSection from "./sections/KeybindsSection";
 import ProcessListSection from "./sections/ProcessListSection";
+import { SettingsSearchInput, SettingsSearchResults } from "./SettingsSearch";
+import type { SettingsSearchResult } from "../../../settingsSearch";
+
+const DevToolsSection = import.meta.env.DEV
+  ? lazy(() => import("./sections/DevToolsSection"))
+  : null;
 
 type SettingsTab =
   | "general"
   | "behavior"
   | "appearance"
+  | "overlay"
+  | "sounds"
   | "keybinds"
   | "process-list"
   | "presets"
-  | "maintenance";
+  | "maintenance"
+  | "dev";
+
+type TabRect = { top: number; height: number; left: number; width: number };
+
+function tabRect(el: HTMLElement | null): TabRect | null {
+  return el
+    ? {
+        top: el.offsetTop,
+        height: el.offsetHeight,
+        left: el.offsetLeft,
+        width: el.offsetWidth,
+      }
+    : null;
+}
+
+function SidebarTab({
+  tab,
+  label,
+  icon: Icon,
+  active,
+  onSelect,
+  onHover,
+  onHoverEnd,
+}: {
+  tab: SettingsTab;
+  label: string;
+  icon: AnimatedIcon;
+  active: boolean;
+  onSelect: (tab: SettingsTab) => void;
+  onHover: (el: HTMLElement | null) => void;
+  onHoverEnd: () => void;
+}) {
+  const { ref, triggerProps } = useIconHover();
+
+  return (
+    <button
+      {...triggerProps}
+      onMouseEnter={(e) => {
+        triggerProps.onMouseEnter?.(e);
+        onHover(e.currentTarget);
+      }}
+      onMouseLeave={(e) => {
+        triggerProps.onMouseLeave?.(e);
+        onHoverEnd();
+      }}
+      className={`sidebar-tab ${active ? "active" : ""}`}
+      onClick={() => onSelect(tab)}
+    >
+      <Icon
+        ref={ref}
+        size={16}
+        isAnimated={false}
+        className="tab-icon"
+        aria-hidden="true"
+      />
+      {label}
+    </button>
+  );
+}
 
 interface Props {
   settings: Settings;
@@ -34,12 +127,16 @@ interface Props {
   onExportPreset: (presetId: PresetId) => Promise<boolean>;
   onImportPreset: () => Promise<boolean | null>;
   onToggleAlwaysOnTop: () => Promise<void>;
+  onRestartAsAdmin: () => Promise<RestartOutcome>;
+  onRestartWithoutAdmin: () => Promise<RestartOutcome>;
+  onOpenCustomizer: () => void;
   onReset: () => Promise<void>;
   updateCheckStatus:
     "idle" | "checking" | "available" | "unavailable" | "error";
   onCheckForUpdate: () => void;
   initialSettingsTab?: string;
   onInitialTabConsumed?: () => void;
+  onOpenFirstRunSetup: () => void;
 }
 
 export default function SettingsPanel({
@@ -56,16 +153,58 @@ export default function SettingsPanel({
   onExportPreset,
   onImportPreset,
   onToggleAlwaysOnTop,
+  onRestartAsAdmin,
+  onRestartWithoutAdmin,
+  onOpenCustomizer,
   onReset,
   updateCheckStatus,
   onCheckForUpdate,
   initialSettingsTab,
   onInitialTabConsumed,
+  onOpenFirstRunSetup,
 }: Props) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [atBottom, setAtBottom] = useState(true);
+  const [search, setSearch] = useState("");
+  const searchAnimation = useRef<number | null>(null);
+  const searchValue = useRef("");
+  const [jumpTo, setJumpTo] = useState<{
+    label: string;
+    nonce: number;
+  } | null>(null);
+  const [scrollState, setScrollState] = useState({
+    atBottom: true,
+    scrollable: false,
+  });
+  const [activeRect, setActiveRect] = useState<TabRect | null>(null);
+  const [hoverRect, setHoverRect] = useState<TabRect | null>(null);
+  const [hoverOn, setHoverOn] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const jumpTimerRef = useRef<number | undefined>(undefined);
+  const navRef = useRef<HTMLElement>(null);
   const prevInitialTabRef = useRef<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const measure = () => {
+      setActiveRect(
+        tabRect(nav.querySelector<HTMLElement>(".sidebar-tab.active")),
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [activeTab]);
+
+  const handleHover = (el: HTMLElement | null) => {
+    const rect = tabRect(el);
+    if (!rect) return;
+    setHoverRect(rect);
+    setHoverOn(true);
+  };
+
+  const handleHoverEnd = () => setHoverOn(false);
 
   useEffect(() => {
     if (
@@ -81,203 +220,273 @@ export default function SettingsPanel({
     }
   }, [initialSettingsTab, onInitialTabConsumed]);
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    setAtBottom(panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2);
-  };
+    // Without this the fade outlives the content: switching to a short tab (or
+    // an empty search) fires no scroll event, so the old "not at bottom" state
+    // kept the gradient on screen over nothing.
+    const scrollable = panel.scrollHeight - panel.clientHeight > 2;
+    setScrollState({
+      scrollable,
+      atBottom:
+        !scrollable ||
+        panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2,
+    });
+  }, []);
 
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
+    handleScroll();
     const observer = new ResizeObserver(handleScroll);
     observer.observe(panel);
-    return () => observer.disconnect();
-  }, [activeTab]);
+    // Sections also grow after mount (process list, fonts, stats), so watch the
+    // content itself, not just the panel box.
+    const mutations = new MutationObserver(handleScroll);
+    mutations.observe(panel, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, [activeTab, search, handleScroll]);
+
+  const showSections = search.trim().length === 0;
+
+  const stopSearchAnimation = useCallback(() => {
+    if (searchAnimation.current !== null) {
+      window.clearInterval(searchAnimation.current);
+      searchAnimation.current = null;
+    }
+  }, []);
+
+  // Clearing deletes the query one step at a time so the text types itself
+  // back out, and the results thin out as it goes.
+  const clearSearch = useCallback(
+    (animate: boolean) => {
+      stopSearchAnimation();
+      if (!animate) {
+        searchValue.current = "";
+        setSearch("");
+        return;
+      }
+      searchAnimation.current = window.setInterval(() => {
+        const current = searchValue.current;
+        if (current.length === 0) {
+          stopSearchAnimation();
+          return;
+        }
+        const step = Math.max(1, Math.ceil(current.length / 14));
+        const next = current.slice(0, -step);
+        searchValue.current = next;
+        setSearch(next);
+        if (next.length === 0) stopSearchAnimation();
+      }, 18);
+    },
+    [stopSearchAnimation],
+  );
+
+  useEffect(() => () => stopSearchAnimation(), [stopSearchAnimation]);
+
+  const handleQueryChange = useCallback(
+    (next: string) => {
+      stopSearchAnimation();
+      searchValue.current = next;
+      setSearch(next);
+    },
+    [stopSearchAnimation],
+  );
+
+  const handleTabSelect = useCallback(
+    (tab: SettingsTab) => {
+      if (search.trim().length > 0) clearSearch(true);
+      setActiveTab(tab);
+    },
+    [search, clearSearch],
+  );
+
+  const handleSearchSelect = useCallback(
+    (result: SettingsSearchResult) => {
+      stopSearchAnimation();
+      searchValue.current = "";
+      setSearch("");
+      setActiveTab(result.tab as SettingsTab);
+      setJumpTo({ label: result.label, nonce: Date.now() });
+    },
+    [stopSearchAnimation],
+  );
+
+  // Land on the row the user picked: switch tab (done above), then scroll the
+  // matching label into view and flash it so it is obvious which row it is.
+  useEffect(() => {
+    if (!jumpTo) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const frame = requestAnimationFrame(() => {
+      const label = jumpTo.label.toLowerCase();
+      const target = Array.from(
+        panel.querySelectorAll<HTMLElement>(".settings-label"),
+      ).find((node) => (node.textContent ?? "").trim().toLowerCase() === label);
+      if (target) {
+        const details = target.closest<HTMLElement>(".sound-details");
+        const unfold = details?.querySelector<HTMLButtonElement>(
+          ".sound-details-toggle",
+        );
+        const needsUnfold = Boolean(
+          details && unfold && details.dataset.open !== "true",
+        );
+        if (needsUnfold) unfold?.click();
+        const row = target.closest<HTMLElement>(".settings-row") ?? target;
+        window.setTimeout(
+          () => {
+            if (typeof row.scrollIntoView === "function") {
+              row.scrollIntoView({ block: "center" });
+            }
+            window.clearTimeout(jumpTimerRef.current);
+            row.classList.remove("settings-row-jump");
+            void row.offsetWidth;
+            row.classList.add("settings-row-jump");
+            jumpTimerRef.current = window.setTimeout(
+              () => row.classList.remove("settings-row-jump"),
+              1400,
+            );
+          },
+          needsUnfold ? 240 : 0,
+        );
+      }
+      setJumpTo(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpTo, activeTab]);
 
   return (
     <div className="settings-wrapper">
-      <nav className="settings-sidebar">
-        <button
-          className={`sidebar-tab ${activeTab === "general" ? "active" : ""}`}
-          onClick={() => setActiveTab("general")}
-        >
-          {/* TODO: replace all settings page icons with better icons that fit the theme more. current icons are temporary stand-ins. */}
-          <span className="tab-icon tab-icon-general">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path className="gen-stem" d="M12 16v-5" />
-              <circle
-                className="gen-dot"
-                cx="12"
-                cy="7"
-                r="1.5"
-                fill="currentColor"
-                stroke="none"
-              />
-            </svg>
-          </span>
-          General
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "behavior" ? "active" : ""}`}
-          onClick={() => setActiveTab("behavior")}
-        >
-          <span className="tab-icon tab-icon-behavior">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect
-                className="beh-track"
-                x="2"
-                y="6"
-                width="20"
-                height="12"
-                rx="6"
-              />
-              <circle
-                className="beh-knob"
-                cx="16"
-                cy="12"
-                r="3.5"
-                fill="currentColor"
-                stroke="none"
-              />
-            </svg>
-          </span>
-          Behavior
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "appearance" ? "active" : ""}`}
-          onClick={() => setActiveTab("appearance")}
-        >
-          <span className="tab-icon tab-icon-appearance">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="4.5" />
-              <g className="app-rays">
-                <line x1="12" y1="3" x2="12" y2="1" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="3" y1="12" x2="1" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="17.66" y1="6.34" x2="19.07" y2="4.93" />
-                <line x1="6.34" y1="6.34" x2="4.93" y2="4.93" />
-                <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" />
-                <line x1="6.34" y1="17.66" x2="4.93" y2="19.07" />
-              </g>
-            </svg>
-          </span>
-          Appearance
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "keybinds" ? "active" : ""}`}
-          onClick={() => setActiveTab("keybinds")}
-        >
-          <span className="tab-icon tab-icon-keybinds">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z" />
-            </svg>
-          </span>
-          Keybinds
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "process-list" ? "active" : ""}`}
-          onClick={() => setActiveTab("process-list")}
-        >
-          <span className="tab-icon tab-icon-process-list">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect width="20" height="16" x="2" y="4" rx="2" />
-              <path d="M6 8h.01" />
-              <path d="M10 8h.01" />
-              <path d="M14 8h.01" />
-            </svg>
-          </span>
-          Process List
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "presets" ? "active" : ""}`}
-          onClick={() => setActiveTab("presets")}
-        >
-          <span className="tab-icon tab-icon-presets">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                className="preset-fill"
-                d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"
-              />
-            </svg>
-          </span>
-          Presets
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "maintenance" ? "active" : ""}`}
-          onClick={() => setActiveTab("maintenance")}
-        >
-          <span className="tab-icon tab-icon-maintenance">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
-            </svg>
-          </span>
-          Maintenance
-        </button>
+      <nav className="settings-sidebar" ref={navRef}>
+        <SettingsSearchInput query={search} onQueryChange={handleQueryChange} />
+        <div
+          className="sidebar-highlight sidebar-highlight-hover"
+          data-ready={hoverRect !== null}
+          data-visible={hoverOn}
+          style={{
+            transform: `translateY(${hoverRect?.top ?? 0}px)`,
+            height: hoverRect?.height ?? 0,
+            left: hoverRect?.left ?? 0,
+            width: hoverRect?.width ?? 0,
+          }}
+        />
+        <div
+          className="sidebar-highlight sidebar-highlight-active"
+          data-ready={activeRect !== null}
+          style={{
+            transform: `translateY(${activeRect?.top ?? 0}px)`,
+            height: activeRect?.height ?? 0,
+            left: activeRect?.left ?? 0,
+            width: activeRect?.width ?? 0,
+          }}
+        />
+        <SidebarTab
+          tab="general"
+          label="General"
+          icon={InfoIcon}
+          active={activeTab === "general"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="behavior"
+          label="Behavior"
+          icon={ToggleRightIcon}
+          active={activeTab === "behavior"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="appearance"
+          label="Appearance"
+          icon={SunIcon}
+          active={activeTab === "appearance"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="overlay"
+          label="Indicator"
+          icon={PictureInPictureIcon}
+          active={activeTab === "overlay"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="sounds"
+          label="Sounds"
+          icon={Volume2Icon}
+          active={activeTab === "sounds"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="keybinds"
+          label="Keybinds"
+          icon={KeyboardIcon}
+          active={activeTab === "keybinds"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="process-list"
+          label="Process List"
+          icon={LayoutListIcon}
+          active={activeTab === "process-list"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="presets"
+          label="Presets"
+          icon={BookmarkIcon}
+          active={activeTab === "presets"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        <SidebarTab
+          tab="maintenance"
+          label="Maintenance"
+          icon={WrenchIcon}
+          active={activeTab === "maintenance"}
+          onHover={handleHover}
+          onHoverEnd={handleHoverEnd}
+          onSelect={handleTabSelect}
+        />
+        {DevToolsSection && (
+          <SidebarTab
+            tab="dev"
+            label="Dev tools"
+            icon={SquareTerminalIcon}
+            active={activeTab === "dev"}
+            onHover={handleHover}
+            onHoverEnd={handleHoverEnd}
+            onSelect={handleTabSelect}
+          />
+        )}
         <a
           className="sidebar-kofi"
           href="#"
           title="Support me on Ko-fi"
+          onMouseEnter={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            burstConfetti(
+              rect.left + rect.width / 2,
+              rect.top + rect.height * 0.3,
+            );
+          }}
           onClick={(e) => {
             e.preventDefault();
             void openUrl("https://ko-fi.com/Z8Z71T8QD4");
@@ -291,33 +500,53 @@ export default function SettingsPanel({
       </nav>
       <div className="settings-corner" />
       <div className="settings-panel" ref={panelRef} onScroll={handleScroll}>
-        {activeTab === "general" && (
+        {!showSections && (
+          <div className="settings-search-view">
+            <SettingsSearchResults
+              query={search}
+              onSelect={handleSearchSelect}
+            />
+          </div>
+        )}
+        {showSections && activeTab === "general" && (
           <GeneralSection
             appInfo={appInfo}
             updateCheckStatus={updateCheckStatus}
             onCheckForUpdate={onCheckForUpdate}
           />
         )}
-        {activeTab === "behavior" && (
+        {showSections && activeTab === "behavior" && (
           <BehaviorSection
             settings={settings}
             update={update}
             onToggleAlwaysOnTop={onToggleAlwaysOnTop}
+            onRestartAsAdmin={onRestartAsAdmin}
+            onRestartWithoutAdmin={onRestartWithoutAdmin}
             portable={appInfo.portable}
           />
         )}
-        {activeTab === "appearance" && (
-          <AppearanceSection settings={settings} update={update} />
+        {showSections && activeTab === "appearance" && (
+          <AppearanceSection
+            settings={settings}
+            update={update}
+            onOpenCustomizer={onOpenCustomizer}
+          />
         )}
-        {activeTab === "keybinds" && (
+        {showSections && activeTab === "overlay" && (
+          <OverlaySection settings={settings} update={update} />
+        )}
+        {showSections && activeTab === "sounds" && (
+          <SoundsSection settings={settings} update={update} />
+        )}
+        {showSections && activeTab === "keybinds" && (
           <KeybindsSection settings={settings} update={update} />
         )}
-        {activeTab === "process-list" && (
+        {showSections && activeTab === "process-list" && (
           <div className="settings-proc-list-wrapper">
             <ProcessListSection settings={settings} update={update} />
           </div>
         )}
-        {activeTab === "presets" && (
+        {showSections && activeTab === "presets" && (
           <PresetsSection
             settings={settings}
             running={running}
@@ -331,12 +560,21 @@ export default function SettingsPanel({
             onImportPreset={onImportPreset}
           />
         )}
-        {activeTab === "maintenance" && (
+        {showSections && activeTab === "maintenance" && (
           <MaintenanceSection onReset={onReset} />
+        )}
+        {showSections && DevToolsSection && activeTab === "dev" && (
+          <Suspense fallback={null}>
+            <DevToolsSection onOpenFirstRunSetup={onOpenFirstRunSetup} />
+          </Suspense>
         )}
       </div>
       <div
-        className={`settings-fade ${atBottom ? "settings-fade--hidden" : ""}`}
+        className={`settings-fade ${
+          scrollState.atBottom || !scrollState.scrollable
+            ? "settings-fade--hidden"
+            : ""
+        }`}
       ></div>
     </div>
   );

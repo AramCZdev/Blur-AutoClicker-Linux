@@ -87,6 +87,28 @@ pub fn write_panic_report(report: &str) {
     }
 }
 
+/// Appends one line to `Diagnostics/shutdown.log`. Used from the session-end
+/// window procedure, where anything that queues work for another thread would
+/// race the process teardown.
+pub fn write_shutdown_note(reason: &str) {
+    let Some(root) = diagnostics_root() else {
+        return;
+    };
+    let _ = std::fs::create_dir_all(&root);
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(root.join("shutdown.log"))
+    {
+        use std::io::Write;
+        let _ = writeln!(file, "{ts} {reason}");
+    }
+}
+
 pub fn get_diagnostics_info() -> Option<DiagnosticsInfo> {
     let root = diagnostics_root()?;
     Some(DiagnosticsInfo {
@@ -129,11 +151,11 @@ mod tests {
 
     #[test]
     fn portable_layout_resolves_single_level() {
-        let exe_dir = std::path::Path::new(r"C:\apps\Blur");
+        let exe_dir = std::path::Path::new("/apps/blur");
         let data = crate::portable::portable_data_dir_of(exe_dir);
         assert_eq!(
             diagnostics_root_of(&data),
-            std::path::PathBuf::from(r"C:\apps\Blur\Data\Diagnostics")
+            std::path::PathBuf::from("/apps/blur/Data/Diagnostics")
         );
     }
 

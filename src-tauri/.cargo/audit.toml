@@ -1,0 +1,29 @@
+# cargo-audit config. Read by `cargo audit` when run from src-tauri/ (our CI).
+#
+# Every ignore below covers a crate that sits in Cargo.lock but never runs in a
+# build of our code:
+# - zip 9.1.2 is ours and patched. zip 0.6.6 is a build-dependency of
+#   crashpad-rs-sys, and build.rs compiles the only file that touches it
+#   (build/tools.rs, via run()) just for the `vendored` strategies. We build
+#   with `prebuilt`.
+# - zstd-safe 5.0.2 comes only from that same zip 0.6.6.
+# Everything else is patched, or an unmaintained/unsound warning we accept.
+# Drop an entry when the crate that carries it leaves the lock.
+
+[advisories]
+ignore = [
+  # zip extract() keeps SUID/SGID bits, lets symlink targets escape the
+  # destination, applies permissions through those symlinks, and aborts the
+  # process on a symlink entry with a huge declared size. All four need
+  # extract(), which nothing in our build calls.
+  "RUSTSEC-2026-0367",
+  "RUSTSEC-2026-0368",
+  "RUSTSEC-2026-0369",
+  "RUSTSEC-2026-0429",
+
+  # zstd DCtx::decompress_stream leaks stale heap when streaming decompression
+  # of a corrupt legacy frame fails. Only reachable through
+  # zstd::stream::write::Decoder, which zip 0.6.6 never uses; it uses
+  # read::Decoder and write::Encoder.
+  "RUSTSEC-2026-0403",
+]
