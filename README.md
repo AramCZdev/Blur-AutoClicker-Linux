@@ -13,19 +13,19 @@
 
   **THIS IS NOT THE ORIGINAL PROJECT THIS IS JUST A FORK THAT MAKES IT RUN ON LINUX. CHECK OUT THE ORIGINAL PROJECT [HERE](https://github.com/Blur009/Blur-AutoClicker)**
 
-  > [!WARNING]
-  > **This is a modified version of [Blur009/Blur-AutoClicker](https://github.com/Blur009/Blur-AutoClicker).**
-  > Original work © Blur009, licensed under GPL-3.0. Linux/X11 port modifications © 2026 the
-  > Blur-AutoClicker-Linux contributors, also licensed under GPL-3.0. No affiliation or
-  > endorsement is implied by Blur009. Upstream remains the canonical Windows build; bug reports
-  > and feature requests for the Windows version belong there, not here.
-  >
-  > **This fork targets Linux only.** The Win32 code paths have been removed rather than
-  > feature-gated, so there is no Windows build here and no plan for one.
-  >
-  > **Status: the Linux port is in progress and the app does not build on Linux yet.** The rest of
-  > this README still describes the Windows release. See
-  > [`docs/linux-port-plan.md`](docs/linux-port-plan.md) for the migration plan and phase status.
+> [!WARNING]
+> **This is a modified version of [Blur009/Blur-AutoClicker](https://github.com/Blur009/Blur-AutoClicker).**
+> Original work © Blur009, licensed under GPL-3.0. Linux/X11 port modifications © 2026 the
+> Blur-AutoClicker-Linux contributors, also licensed under GPL-3.0. No affiliation or
+> endorsement is implied by Blur009. Upstream remains the canonical Windows build; bug reports
+> and feature requests for the Windows version belong there, not here.
+>
+> **This fork targets Linux only.** The Win32 code paths have been removed rather than
+> feature-gated, so there is no Windows build here and no plan for one.
+>
+> **Status: the Linux port is in progress and the app does not build on Linux yet.** The rest of
+> this README still describes the Windows release. See
+> [`docs/linux-port-plan.md`](docs/linux-port-plan.md) for the migration plan and phase status.
 
   <img src="https://github.com/Blur009/Blur-AutoClicker/blob/main/screenshots/advanced_dark.png" width="600"/>
 
