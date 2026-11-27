@@ -1,6 +1,10 @@
 pub mod cycle;
 pub mod failsafe;
 pub mod keyboard;
+#[cfg(not(target_os = "linux"))]
+pub mod mouse;
+#[cfg(target_os = "linux")]
+#[path = "mouse_linux.rs"]
 pub mod mouse;
 pub mod process;
 pub mod rng;
