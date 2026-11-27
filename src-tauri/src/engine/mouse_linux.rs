@@ -2,7 +2,6 @@ use super::cycle::{execute_click_cycle, ClickCycleKind, ClickCyclePlan};
 use super::worker::{sleep_interruptible, RunControl};
 use super::{SendResult};
 use std::time::{Duration, Instant};
-use x11rb::connection::Connection as _;
 use x11rb::protocol::xproto::{
     ConnectionExt as XprotoExt, BUTTON_PRESS_EVENT, BUTTON_RELEASE_EVENT, MOTION_NOTIFY_EVENT,
 };
