@@ -13,7 +13,7 @@
 
   **THIS IS NOT THE ORIGINAL PROJECT THIS IS JUST A FORK THAT MAKES IT RUN ON LINUX. CHECK OUT THE ORIGINAL PROJECT [HERE](https://github.com/Blur009/Blur-AutoClicker)**
 
-  > [!IMPORTANT]
+  > [!WARNING]
   > **This is a modified version of [Blur009/Blur-AutoClicker](https://github.com/Blur009/Blur-AutoClicker).**
   > Original work © Blur009, licensed under GPL-3.0. Linux/X11 port modifications © 2026 the
   > Blur-AutoClicker-Linux contributors, also licensed under GPL-3.0. No affiliation or
