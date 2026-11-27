@@ -6,7 +6,7 @@
 **Target:** X11 / XLib + XTest, via Tauri 2 + WebKitGTK, for X11 desktops (GNOME, KDE Plasma, XFCE, MATE) under Xorg or XWayland.
 **Non-goal:** native Wayland support (see [§10.1](#101-wayland)).
 
-Status: **plan only — no code has been modified.**
+Status: **implementation in progress.** The first X11 slice now provides a lazy shared XTest connection plus Linux mouse injection, pointer position/movement, root-screen geometry, click batching, and smooth pointer movement in `src-tauri/src/x11/` and `src-tauri/src/engine/mouse_linux.rs`. This is not a complete port: keyboard injection, global hotkeys, process/window integration, pickers, overlay behavior, and end-to-end Linux build/runtime validation remain outstanding.
 
 ---
 
