@@ -710,6 +710,14 @@ pub fn run() {
     #[cfg(all(target_os = "windows", debug_assertions))]
     silence_inherited_stderr();
 
+    // WebKitGTK's GBM/dmabuf renderer fails on some X11 drivers and leaves
+    // the webview blank. Default to software rendering on Linux while still
+    // allowing users to override it explicitly.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     crate::startup::mark_start();
     crate::portable::init();
     setup_panic_hook();
