@@ -1,6 +1,6 @@
 use super::cycle::{execute_click_cycle, ClickCycleKind, ClickCyclePlan};
 use super::worker::{sleep_interruptible, RunControl};
-use super::{SendResult};
+use super::SendResult;
 use std::time::{Duration, Instant};
 use x11rb::protocol::xproto::{
     ConnectionExt as XprotoExt, BUTTON_PRESS_EVENT, BUTTON_RELEASE_EVENT, MOTION_NOTIFY_EVENT,
@@ -28,14 +28,23 @@ pub struct VirtualScreenRect {
 impl VirtualScreenRect {
     #[inline]
     pub fn new(left: i32, top: i32, width: i32, height: i32) -> Self {
-        Self { left, top, width, height }
+        Self {
+            left,
+            top,
+            width,
+            height,
+        }
     }
 
     #[inline]
-    pub fn right(self) -> i32 { self.left + self.width }
+    pub fn right(self) -> i32 {
+        self.left + self.width
+    }
 
     #[inline]
-    pub fn bottom(self) -> i32 { self.top + self.height }
+    pub fn bottom(self) -> i32 {
+        self.top + self.height
+    }
 
     #[inline]
     pub fn contains(self, x: i32, y: i32) -> bool {
@@ -55,13 +64,23 @@ impl VirtualScreenRect {
 
 pub fn current_cursor_position() -> Option<(i32, i32)> {
     let server = crate::x11::get()?;
-    let pointer = server.connection.query_pointer(server.root).ok()?.reply().ok()?;
+    let pointer = server
+        .connection
+        .query_pointer(server.root)
+        .ok()?
+        .reply()
+        .ok()?;
     Some((pointer.root_x as i32, pointer.root_y as i32))
 }
 
 pub fn current_virtual_screen_rect() -> Option<VirtualScreenRect> {
     let server = crate::x11::get()?;
-    let geometry = server.connection.get_geometry(server.root).ok()?.reply().ok()?;
+    let geometry = server
+        .connection
+        .get_geometry(server.root)
+        .ok()?
+        .reply()
+        .ok()?;
     if geometry.width == 0 || geometry.height == 0 {
         return None;
     }
@@ -104,11 +123,32 @@ pub fn get_button_flags(button: i32) -> (u32, u32) {
 
 fn button_for_flag(flag: u32) -> Option<(u8, u8)> {
     if flag & MOUSEEVENTF_LEFTDOWN != 0 || flag & MOUSEEVENTF_LEFTUP != 0 {
-        Some((1, if flag & MOUSEEVENTF_LEFTDOWN != 0 { BUTTON_PRESS_EVENT } else { BUTTON_RELEASE_EVENT }))
+        Some((
+            1,
+            if flag & MOUSEEVENTF_LEFTDOWN != 0 {
+                BUTTON_PRESS_EVENT
+            } else {
+                BUTTON_RELEASE_EVENT
+            },
+        ))
     } else if flag & MOUSEEVENTF_RIGHTDOWN != 0 || flag & MOUSEEVENTF_RIGHTUP != 0 {
-        Some((3, if flag & MOUSEEVENTF_RIGHTDOWN != 0 { BUTTON_PRESS_EVENT } else { BUTTON_RELEASE_EVENT }))
+        Some((
+            3,
+            if flag & MOUSEEVENTF_RIGHTDOWN != 0 {
+                BUTTON_PRESS_EVENT
+            } else {
+                BUTTON_RELEASE_EVENT
+            },
+        ))
     } else if flag & MOUSEEVENTF_MIDDLEDOWN != 0 || flag & MOUSEEVENTF_MIDDLEUP != 0 {
-        Some((2, if flag & MOUSEEVENTF_MIDDLEDOWN != 0 { BUTTON_PRESS_EVENT } else { BUTTON_RELEASE_EVENT }))
+        Some((
+            2,
+            if flag & MOUSEEVENTF_MIDDLEDOWN != 0 {
+                BUTTON_PRESS_EVENT
+            } else {
+                BUTTON_RELEASE_EVENT
+            },
+        ))
     } else {
         None
     }
@@ -204,17 +244,29 @@ fn send_clicks_inner(
         }
     }
 
-    if blocked.get() { SendResult::Blocked } else { SendResult::Sent }
+    if blocked.get() {
+        SendResult::Blocked
+    } else {
+        SendResult::Sent
+    }
 }
 
 #[inline]
 fn batch_result(sent: bool) -> SendResult {
-    if sent { SendResult::Sent } else { SendResult::Blocked }
+    if sent {
+        SendResult::Sent
+    } else {
+        SendResult::Blocked
+    }
 }
 
 #[inline]
 pub fn ease_in_out_quad(t: f64) -> f64 {
-    if t < 0.5 { 2.0 * t * t } else { 1.0 - (-2.0 * t + 2.0).powi(2) / 2.0 }
+    if t < 0.5 {
+        2.0 * t * t
+    } else {
+        1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
+    }
 }
 
 #[inline]
@@ -270,16 +322,34 @@ mod tests {
 
     #[test]
     fn button_mapping_preserves_ui_button_choices() {
-        assert_eq!(get_button_flags(1), (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP));
-        assert_eq!(get_button_flags(2), (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP));
-        assert_eq!(get_button_flags(3), (MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP));
+        assert_eq!(
+            get_button_flags(1),
+            (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP)
+        );
+        assert_eq!(
+            get_button_flags(2),
+            (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP)
+        );
+        assert_eq!(
+            get_button_flags(3),
+            (MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP)
+        );
     }
 
     #[test]
     fn x11_button_numbers_are_correct() {
-        assert_eq!(button_for_flag(MOUSEEVENTF_LEFTDOWN), Some((1, BUTTON_PRESS_EVENT)));
-        assert_eq!(button_for_flag(MOUSEEVENTF_RIGHTUP), Some((3, BUTTON_RELEASE_EVENT)));
-        assert_eq!(button_for_flag(MOUSEEVENTF_MIDDLEDOWN), Some((2, BUTTON_PRESS_EVENT)));
+        assert_eq!(
+            button_for_flag(MOUSEEVENTF_LEFTDOWN),
+            Some((1, BUTTON_PRESS_EVENT))
+        );
+        assert_eq!(
+            button_for_flag(MOUSEEVENTF_RIGHTUP),
+            Some((3, BUTTON_RELEASE_EVENT))
+        );
+        assert_eq!(
+            button_for_flag(MOUSEEVENTF_MIDDLEDOWN),
+            Some((2, BUTTON_PRESS_EVENT))
+        );
     }
 
     #[test]

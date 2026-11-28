@@ -11,24 +11,22 @@
 use core::ffi::c_void;
 use windows_sys::core::{BOOL, PCWSTR, PWSTR};
 use windows_sys::Win32::Foundation::{
-    HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM, WIN32_ERROR, WAIT_EVENT,
+    HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WAIT_EVENT, WIN32_ERROR, WPARAM,
 };
-use windows_sys::Win32::Graphics::Gdi::{
-    BITMAPINFO, DIB_USAGE, HBRUSH, HBITMAP, HDC, HGDIOBJ,
-};
+use windows_sys::Win32::Graphics::Gdi::{BITMAPINFO, DIB_USAGE, HBITMAP, HBRUSH, HDC, HGDIOBJ};
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CREATE_TOOLHELP_SNAPSHOT_FLAGS, PROCESSENTRY32W,
 };
-use windows_sys::Win32::System::Threading::{PROCESS_ACCESS_RIGHTS, PROCESS_NAME_FORMAT};
 use windows_sys::Win32::System::StationsAndDesktops::{
     DESKTOP_ACCESS_FLAGS, DESKTOP_CONTROL_FLAGS, HDESK, USER_OBJECT_INFORMATION_INDEX,
 };
+use windows_sys::Win32::System::Threading::{PROCESS_ACCESS_RIGHTS, PROCESS_NAME_FORMAT};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{INPUT, MAP_VIRTUAL_KEY_TYPE};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     DI_FLAGS, GET_ANCESTOR_FLAGS, HHOOK, HICON, HOOKPROC, ICONINFO, MESSAGEBOX_RESULT,
     MESSAGEBOX_STYLE, MSG, MSG_WAIT_FOR_MULTIPLE_OBJECTS_EX_FLAGS, PEEK_MESSAGE_REMOVE_TYPE,
     QUEUE_STATUS_FLAGS, SYSTEM_METRICS_INDEX, SYSTEM_PARAMETERS_INFO_ACTION,
-    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, WNDENUMPROC, WINDOWS_HOOK_ID,
+    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, WINDOWS_HOOK_ID, WNDENUMPROC,
 };
 
 #[no_mangle]
@@ -291,10 +289,7 @@ pub unsafe extern "system" fn GetWindowThreadProcessId(
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn MapVirtualKeyW(
-    _ucode: u32,
-    _umaptype: MAP_VIRTUAL_KEY_TYPE,
-) -> u32 {
+pub unsafe extern "system" fn MapVirtualKeyW(_ucode: u32, _umaptype: MAP_VIRTUAL_KEY_TYPE) -> u32 {
     0
 }
 
@@ -371,11 +366,7 @@ pub unsafe extern "system" fn GetForegroundWindow() -> HWND {
 }
 
 #[no_mangle]
-pub unsafe extern "system" fn GetWindowTextW(
-    _hwnd: HWND,
-    lpstring: PWSTR,
-    nmaxcount: i32,
-) -> i32 {
+pub unsafe extern "system" fn GetWindowTextW(_hwnd: HWND, lpstring: PWSTR, nmaxcount: i32) -> i32 {
     if !lpstring.is_null() && nmaxcount > 0 {
         unsafe { core::ptr::write_bytes(lpstring, 0, nmaxcount as usize) };
     }

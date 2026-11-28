@@ -20,11 +20,15 @@
 > endorsement is implied by Blur009. Upstream remains the canonical Windows build; bug reports
 > and feature requests for the Windows version belong there, not here.
 >
-> **This fork targets Linux only.** The Win32 code paths have been removed rather than
-> feature-gated, so there is no Windows build here and no plan for one.
+> **This fork targets Linux only.** Win32 runtime paths are being replaced with X11
+> implementations; until that work is complete, the merged upstream code is kept behind
+> compatibility stubs so the project builds on Linux. There is no Windows build here and no
+> plan for one.
 >
-> **Status: the Linux port is in progress and the app does not build on Linux yet.** The rest of
-> this README still describes the Windows release. See
+> **Status: the Linux port is in progress.** The Rust workspace builds and its tests pass on
+> Linux, and the first X11 mouse backend is in place. Global hotkeys, keyboard injection,
+> window/process integration, pickers, and overlay behavior are still outstanding. The rest of
+> this README describes the upstream Windows release. See
 > [`docs/linux-port-plan.md`](docs/linux-port-plan.md) for the migration plan and phase status.
 
   <img src="https://github.com/Blur009/Blur-AutoClicker/blob/main/screenshots/advanced_dark.png" width="600"/>

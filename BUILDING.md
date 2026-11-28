@@ -5,10 +5,10 @@ implemented. The original Windows project is maintained at
 [Blur009/Blur-AutoClicker](https://github.com/Blur009/Blur-AutoClicker).
 
 > [!WARNING]
-> The Linux port is still a work in progress. Some input, hotkey, and window-management
-> paths are represented by temporary no-op compatibility stubs while their X11
-> implementations are being developed. A successful build does **not** mean that
-> clicking or global hotkeys are fully functional yet. See
+> The Linux port is still a work in progress. Mouse injection via XTest is implemented,
+> but global hotkeys, keyboard injection, window/process integration, pickers, and overlay
+> behavior still rely on temporary no-op compatibility stubs while their X11 implementations
+> are developed. A successful build does **not** mean the whole app is functional yet. See
 > [the Linux port plan](docs/linux-port-plan.md) for the implementation status.
 
 ## Prerequisites

@@ -141,7 +141,10 @@ impl TimerResolutionGuard {
         const PR_SET_TIMERSLACK: libc::c_int = 29;
         let previous_slack = unsafe { libc::prctl(libc::PR_GET_TIMERSLACK) };
         if unsafe { libc::prctl(PR_SET_TIMERSLACK, 1 as libc::c_long) } != 0 {
-            log::warn!("[Timer] Could not reduce timer slack: {}" , std::io::Error::last_os_error());
+            log::warn!(
+                "[Timer] Could not reduce timer slack: {}",
+                std::io::Error::last_os_error()
+            );
         }
         Self { previous_slack }
     }

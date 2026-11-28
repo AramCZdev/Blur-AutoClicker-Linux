@@ -31,11 +31,11 @@ mod startup;
 mod theme_window;
 mod ui_commands;
 mod updates;
-#[cfg(target_os = "linux")]
-mod x11;
+mod webview_guard;
 #[cfg(not(target_os = "windows"))]
 mod win32_stubs;
-mod webview_guard;
+#[cfg(target_os = "linux")]
+mod x11;
 
 pub use crate::app_state::ClickerStatusPayload;
 pub use crate::app_state::{ClickerState, IconState};

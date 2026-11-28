@@ -7,9 +7,9 @@
 use std::sync::OnceLock;
 
 use x11rb::connection::Connection as _;
+use x11rb::protocol::xproto::Window;
 use x11rb::protocol::xtest::ConnectionExt as _;
 use x11rb::rust_connection::RustConnection;
-use x11rb::protocol::xproto::Window;
 
 pub struct X11Connection {
     pub connection: RustConnection,
