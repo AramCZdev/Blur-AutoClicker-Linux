@@ -199,6 +199,9 @@ pub fn init_overlay(app: &AppHandle) -> AppResult<()> {
 
     log::info!("[Overlay] Running one-time init...");
 
+    // tao's Linux backend unwraps the GDK window here; on a hidden window it
+    // is not realized yet and the call panics.
+    #[cfg(target_os = "windows")]
     window.set_ignore_cursor_events(true)?;
     let _ = window.set_decorations(false);
 

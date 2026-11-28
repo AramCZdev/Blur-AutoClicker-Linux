@@ -73,6 +73,7 @@ fn round2(v: f64) -> f64 {
     (v * 100.0).round() / 100.0
 }
 
+#[cfg(target_os = "windows")]
 fn app_dir() -> PathBuf {
     if crate::portable::is_portable() {
         if let Some(dir) = crate::portable::data_dir() {
@@ -81,6 +82,18 @@ fn app_dir() -> PathBuf {
     }
     let app_data = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
     PathBuf::from(app_data).join("BlurAutoClicker")
+}
+
+#[cfg(not(target_os = "windows"))]
+fn app_dir() -> PathBuf {
+    if crate::portable::is_portable() {
+        if let Some(dir) = crate::portable::data_dir() {
+            return dir;
+        }
+    }
+    dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("BlurAutoClicker")
 }
 
 fn stats_db_path() -> PathBuf {

@@ -354,6 +354,9 @@ pub fn init(app: &AppHandle) {
 
     match built {
         Ok(window) => {
+            // tao's Linux backend unwraps the GDK window here; on a hidden
+            // window it is not realized yet and the call panics.
+            #[cfg(target_os = "windows")]
             if let Err(e) = window.set_ignore_cursor_events(true) {
                 log::warn!("[indicator] ignore_cursor_events failed: {e}");
             }
