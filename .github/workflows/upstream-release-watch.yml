@@ -1,0 +1,129 @@
+name: Upstream Release Watch
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-release-watch
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: Check Blur009 releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read fork version
+        id: fork
+        run: |
+          version="$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -n1)"
+          if [ -z "$version" ]; then
+            echo "::error::Could not read version from package.json"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream latest release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_REPO: ${{ vars.UPSTREAM_REPO || 'Blur009/Blur-AutoClicker' }}
+        run: |
+          gh api "repos/$UPSTREAM_REPO/releases/latest" > "$RUNNER_TEMP/upstream_release.json"
+          tag="$(jq -r '.tag_name' "$RUNNER_TEMP/upstream_release.json")"
+          name="$(jq -r '.name // .tag_name' "$RUNNER_TEMP/upstream_release.json")"
+          url="$(jq -r '.html_url' "$RUNNER_TEMP/upstream_release.json")"
+          published="$(jq -r '.published_at' "$RUNNER_TEMP/upstream_release.json")"
+          version="${tag#v}"
+          {
+            echo "tag=$tag"
+            echo "name=$name"
+            echo "url=$url"
+            echo "published=$published"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compare versions
+        id: compare
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          newest="$(printf '%s\n%s\n' "$FORK_VERSION" "$UPSTREAM_VERSION" | sort -V | tail -n1)"
+          if [ "$UPSTREAM_VERSION" != "$FORK_VERSION" ] && [ "$newest" = "$UPSTREAM_VERSION" ]; then
+            echo "newer=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "newer=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open upstream release alert
+        if: steps.compare.outputs.newer == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+          RELEASE_NAME: ${{ steps.upstream.outputs.name }}
+          RELEASE_URL: ${{ steps.upstream.outputs.url }}
+          PUBLISHED: ${{ steps.upstream.outputs.published }}
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+        run: |
+          label="upstream-release"
+          title="Upstream $TAG is available (fork is $FORK_VERSION)"
+
+          gh label create "$label" \
+            --repo "$REPO" \
+            --color "0E8A16" \
+            --description "A newer upstream Blur009 release is available" 2>/dev/null || true
+
+          existing="$(gh issue list --repo "$REPO" --state open --label "$label" \
+            --json number,title \
+            --jq '.[] | "\(.number)\t\(.title)"' |
+            awk -F '\t' -v wanted="$title" '$2 == wanted { print $1; exit }')"
+
+          if [ -n "$existing" ]; then
+            echo "Alert already open: #$existing"
+            echo "### Upstream release available" >> "$GITHUB_STEP_SUMMARY"
+            echo "Alert #$existing is already open for **$TAG**." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          gh issue list --repo "$REPO" --state open --label "$label" \
+            --json number --jq '.[].number' |
+            while read -r number; do
+              [ -n "$number" ] || continue
+              gh issue close "$number" --repo "$REPO" \
+                --comment "Superseded by a newer upstream release alert."
+            done
+
+          body="Upstream **$TAG** is newer than this fork's **$FORK_VERSION**.
+
+          - Release: [$RELEASE_NAME]($RELEASE_URL)
+          - Published: $PUBLISHED
+
+          Review the upstream changelog and port the relevant changes before bumping the fork version.
+
+          @$OWNER"
+
+          issue_url="$(gh issue create --repo "$REPO" --title "$title" --body "$body" --label "$label" --assignee "$OWNER")"
+          echo "### Upstream release available" >> "$GITHUB_STEP_SUMMARY"
+          echo "Opened alert: $issue_url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Up to date
+        if: steps.compare.outputs.newer != 'true'
+        env:
+          FORK_VERSION: ${{ steps.fork.outputs.version }}
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+        run: |
+          echo "### Upstream release watch" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fork **$FORK_VERSION** is up to date with upstream **$UPSTREAM_VERSION**." >> "$GITHUB_STEP_SUMMARY"
