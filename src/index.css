@@ -110,6 +110,11 @@
   outline: none;
 }
 
+html,
+body {
+  background: var(--bg-base, rgb(12, 12, 14));
+}
+
 body {
   color: var(--text-primary);
   font-family: var(--font-family-base);

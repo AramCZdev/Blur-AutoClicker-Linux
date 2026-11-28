@@ -218,7 +218,9 @@ fn create_main_window(app: &tauri::App) -> tauri::Result<()> {
             .resizable(false)
             .fullscreen(false)
             .decorations(false)
-            .transparent(true)
+            // Software-rendered WebKitGTK on X11 can fail to repaint a
+            // transparent window, leaving it blank or partially drawn.
+            .transparent(!cfg!(target_os = "linux"))
             .maximizable(false)
             .shadow(false);
 
