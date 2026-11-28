@@ -42,6 +42,7 @@ pub use crate::app_state::{ClickerState, IconState};
 use crate::engine::worker::emit_status;
 use crate::error::poisoned_inner;
 use crate::hotkeys::register_hotkey_inner;
+#[cfg(target_os = "windows")]
 use crate::hotkeys::start_hotkey_listener;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -563,6 +564,9 @@ fn setup_hotkeys(app: &AppHandle) -> Result<(), std::io::Error> {
         hotkey
     };
 
+    // The Linux port has no key-hook backend yet; starting the Win32-based
+    // listener only produces bogus "Windows API call failure" warnings.
+    #[cfg(target_os = "windows")]
     start_hotkey_listener(app.clone());
     if let Err(err) = register_hotkey_inner(app, initial_hotkey) {
         log::warn!("[Hotkeys] startup registration failed: {err}");
